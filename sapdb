@@ -1,0 +1,78 @@
+#!/bin/bash
+
+Service_name=SyBASE-IQ
+Log_file="/var/log/sybase-service.log"
+
+
+
+function writelog {
+	echo `date +"%b %d %H:%M:%S "` "$1" | tee -a $Log_file
+}
+
+
+start() {
+        writelog "Attempting to start $Service_name "
+	/bin/su -l pnladm -c 'source /home/pnladm/IQ-16_1.sh; /usr/sap/PNL/server/IQ-16_1/bin64/start_iq @/usr/sap/PNL/database/PNL.cfg /usr/sap/PNL/database/PNL.db -ek $db_pass > /dev/null'
+        res=$?
+        if [ $res -eq 0 ]
+        then
+		writelog "$Service_name Start successfully"
+		exit 0
+        else
+                writelog "$Service_name Start FAILED"
+                exit 1
+        fi
+}
+
+stop() {
+	writelog "Attempting to stop $Service_name "
+	/bin/su -l pnladm -c 'source /home/pnladm/IQ-16_1.sh; /usr/sap/PNL/server/IQ-16_1/bin64/stop_iq -stop one > /dev/null'
+        res=$?
+        if [ $res -eq 0 ]
+        then
+                writelog "$Service_name Stop successfully"
+		exit 0
+        else
+                writelog "$Service_name Stop FAILED"
+                exit 1
+        fi
+}
+
+
+status() {
+
+        pidis=$(pidof iqsrv16)
+        if [ -n "$pidis" ]
+        then
+		writelog "$Service_name is running"
+		exit 0
+        else
+                writelog "$Service_name is stopped"
+		exit 1
+        fi
+}
+
+restart() {
+
+        stop
+        start
+}
+
+case "$1" in
+
+        start)
+                start
+                ;;
+        stop)
+                stop
+                ;;
+        restart)
+                restart
+                ;;
+        status)
+                status
+                ;;
+        *)
+                echo "Incorrect arg options {start|stop|restart}"
+                exit 1
+esac
